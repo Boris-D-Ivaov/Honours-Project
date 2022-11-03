@@ -1,0 +1,30 @@
+################################################################################
+#Chrome forensics tool
+#Developed by Boris Ivanov
+################################################################################
+import os
+import sqlite3
+import datetime
+
+def humanTime(timestamp):
+    #Chrome stores timestamps in the number of microseconds since Jan 1 1601.
+    #To convert, we create a datetime object for Jan 1 1601...
+    epoch_start = datetime.datetime(1601,1,1)
+    #create an object for the number of microseconds in the timestamp
+    delta = datetime.timedelta(microseconds=int(timestamp))
+    #and return the sum of the two.
+    return epoch_start + delta
+
+#Chrome default folder
+root_dir = input("Enter chrome folder path: ")
+#DB Files
+history = root_dir + "\History"
+
+selectStatement = "SELECT url, title, visit_count, typed_count, last_visit_time FROM urls;"
+c = sqlite3.connect(history)
+for row in c.execute(selectStatement):
+    print ("URL:",row[0])
+    print ("\tTitle:",str(row[1]))
+    print ("\tVisit Count:",str(row[2]))
+    print ("\tTyped Count:",str(row[3]))
+    print ("\tLast Visit:",str(humanTime(row[4])))
