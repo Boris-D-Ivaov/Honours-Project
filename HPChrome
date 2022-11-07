@@ -5,26 +5,45 @@
 import os
 import sqlite3
 import datetime
+from datetime import date
+import pandas as pd
 
 def humanTime(timestamp):
-    #Chrome stores timestamps in the number of microseconds since Jan 1 1601.
-    #To convert, we create a datetime object for Jan 1 1601...
     epoch_start = datetime.datetime(1601,1,1)
     #create an object for the number of microseconds in the timestamp
     delta = datetime.timedelta(microseconds=int(timestamp))
-    #and return the sum of the two.
     return epoch_start + delta
 
+today = date.today()
 #Chrome default folder
 root_dir = input("Enter chrome folder path: ")
 #DB Files
 history = root_dir + "\History"
+logins = root_dir + "\Login Data"
 
-selectStatement = "SELECT url, title, visit_count, typed_count, last_visit_time FROM urls;"
-c = sqlite3.connect(history)
-for row in c.execute(selectStatement):
-    print ("URL:",row[0])
-    print ("\tTitle:",str(row[1]))
-    print ("\tVisit Count:",str(row[2]))
-    print ("\tTyped Count:",str(row[3]))
-    print ("\tLast Visit:",str(humanTime(row[4])))
+selectURL = "SELECT url, title, visit_count, typed_count, last_visit_time FROM urls;"
+selectLogin = "SELECT origin_url, username_value, password_value, date_last_used\
+ FROM logins"
+
+saveFile = ("data/" + today.strftime("%b-%d-%Y") + ".xlsx")
+
+c_url = sqlite3.connect(history)
+#read databse
+df_url=pd.read_sql(selectURL, c_url)
+#fix timestamps
+df_url["last_visit"] = df_url["last_visit_time"].apply(humanTime)
+del df_url["last_visit_time"]
+
+
+c_login = sqlite3.connect(logins)
+#read databse
+df_login=pd.read_sql(selectLogin, c_login)
+print(df_login.head(2))
+#fix timestamps
+df_login["last_used"] = df_login["date_last_used"].apply(humanTime)
+del df_login["date_last_used"]
+
+
+with pd.ExcelWriter(saveFile) as writer:
+    df_url.to_excel(writer, sheet_name="History", index=False)
+    df_login.to_excel(writer, sheet_name="LoginData", index=False)
