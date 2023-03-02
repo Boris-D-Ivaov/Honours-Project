@@ -186,7 +186,7 @@ c_cookies = sqlite3.connect(cookies)
 df_cookies = pd.read_sql(selectCookies, c_cookies)
 df_cookies["creation_time"] = df_cookies["creation_utc"].apply(humanTime)
 df_cookies["expiration"] = df_cookies["expires_utc"].apply(humanTime)
-df_cookies["alst accessed"] = df_cookies["last_access_utc"].apply(humanTime)
+df_cookies["last accessed"] = df_cookies["last_access_utc"].apply(humanTime)
 df_cookies["last_update"] = df_cookies["last_update_utc"].apply(humanTime)
 df_cookies["value"] = df_cookies["encrypted_value"].apply(decrypt_password, key=key)
 del df_cookies["creation_utc"]
