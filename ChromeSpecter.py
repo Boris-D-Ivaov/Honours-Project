@@ -12,6 +12,7 @@ import json
 import datetime
 from datetime import date
 import pandas as pd
+import shutil
 
 os.system("cls||clear")#clear terminal
 
@@ -49,9 +50,8 @@ def get_encryption_key():
     key = base64.b64decode(local_state["os_crypt"]["encrypted_key"])
     # remove DPAPI str
     key = key[5:]
-    # return decrypted key that was originally encrypted
-    # using a session key derived from current user's logon credentials
-    # doc: http://timgolden.me.uk/pywin32-docs/win32crypt.html
+    # return decrypted key that was originally encrypted using a session key derived from current user's logon credentials
+    # http://timgolden.me.uk/pywin32-docs/win32crypt__CryptProtectData_meth.html
     return win32crypt.CryptUnprotectData(key, None, None, None, 0)[1]
 def decrypt_password(password, key):
     # get the initialization vector
@@ -62,6 +62,7 @@ def decrypt_password(password, key):
     # decrypt password
     return cipher.decrypt(password)[:-16].decode()
 key = get_encryption_key()
+
 
 #date and time
 today = date.today()
@@ -127,7 +128,6 @@ def menuSystem():
           os.system("cls||clear")
           print("\n[-] Invalid selection!")
 menuSystem()
-print(root_dir)
 #DB Files
 history = root_dir + "\History"
 logins = root_dir + "\Login Data"
@@ -251,12 +251,4 @@ with pd.ExcelWriter(saveFile) as writer:
         col_idx = df_cookies.columns.get_loc(column)
         writer.sheets['Cookies'].set_column(col_idx, col_idx, column_length)
 print("\n[+]XLSX Report created succesfully")
-
-# saveFile = ("data/" + today.strftime("%b-%d-%Y") + ".xlsx")
-# with pd.ExcelWriter(saveFile) as writer:
-#     df_url.to_excel(writer, sheet_name="History", index=False)
-#     df_login.to_excel(writer, sheet_name="LoginData", index=False)
-#     df_predict.to_excel(writer, sheet_name="Action Predictor", index=False)
-#     df_phone.to_excel(writer, sheet_name="Phone numbers", index=False)
-#     df_card.to_excel(writer, sheet_name="Credit cards", index=False)
-# print("\n[+]XLSX Report created succesfully") "%b-%d-%Y"
+#print (key.decode('UTF-8'))
